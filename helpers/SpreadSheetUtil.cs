@@ -1,27 +1,25 @@
 ﻿
-using log4net;
+using OfficeOpenXml;
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using TimeSheetTool.model;
-using OfficeOpenXml;
 
 
 namespace TimeSheetTool.helpers
 {
     public class SpreadSheetUtil
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(SpreadSheetUtil));
-
-        private FileInfo spreadSheetFile;
-
-        private readonly Dictionary<string, Dictionary<int, object>> cachedRows; 
+        private readonly FileInfo spreadSheetFile;
+        private readonly Dictionary<string, CostCentreInfo> costCentreCache; 
 
         public SpreadSheetUtil(string fileName)
         {
             spreadSheetFile = new FileInfo(fileName);
-            cachedRows = new Dictionary<string, Dictionary<int, object>>();
+            
+            // put in the cache the info for the given cost centre, as there will be dozens of reads for the same project
+            costCentreCache = new Dictionary<string, CostCentreInfo>();
         }
 
         public void AddSheet(List<model.SpreadSheetEntry> entries, string sheetName)
@@ -30,26 +28,25 @@ namespace TimeSheetTool.helpers
         }
 
 
-        public Dictionary<int, object> GetCostCentreDetailsFromSheet(model.TimeSheetEntry timeSheetEntry, string companyCostCentreSheetName)
+        public CostCentreInfo GetCostCentreDetailsFromSheet(TimeSheetEntry timeSheetEntry, string companyCostCentreSheetName)
         {
             var projectName = timeSheetEntry.ProjectName;
             var projectId = projectName.Substring(projectName.LastIndexOf(" ") + 1);
 
-            if (cachedRows.ContainsKey(projectId))
+            if (costCentreCache.ContainsKey(projectId))
             {
-                return cachedRows[projectId];
+                return costCentreCache[projectId];
             }
 
-            var row = GetRowForValueInFirstColumn(companyCostCentreSheetName, projectId);
-            cachedRows.Add(projectId,row);
+            var costCentreInfo = GetCostCentreInfo(companyCostCentreSheetName, projectId);
+            costCentreCache.Add(projectId,costCentreInfo);
         
-            return row;
+            return costCentreInfo;
         }
 
 
-        private Dictionary<int, object> GetRowForValueInFirstColumn(string sheetName, string projectId)
+        private CostCentreInfo GetCostCentreInfo(string sheetName, string projectId)
         {
-            var row = new Dictionary<int, object>();
 
             using (ExcelPackage xlPackage = new ExcelPackage(spreadSheetFile))
             {
@@ -70,6 +67,7 @@ namespace TimeSheetTool.helpers
                 {
                     string cell = (string)worksheet.GetValue(rownum, 1);
                     cell = cell.Trim();
+                    //assumes the cost centre column includes the numeric project somewhere in the text
                     if (cell.Contains(projectId)) break;
                 }
 
@@ -78,15 +76,9 @@ namespace TimeSheetTool.helpers
                     throw new Exception("Project Id in spreadsheet could not be found: " + projectId);
                 }
 
-                var colnum = 0;
-                while (worksheet.GetValue(rownum, ++colnum) != null)
-                {
-                    var cell = worksheet.GetValue(rownum, colnum);
-                    row.Add(colnum, cell);
-                }
+                return new CostCentreInfo((string) worksheet.GetValue(rownum, 1), (string) worksheet.GetValue(rownum, 5), (string) worksheet.GetValue(rownum, 6));
             }
 
-            return row;
         }
 
         private void AddSheeet(String name, List<SpreadSheetEntry> entries)
@@ -113,11 +105,14 @@ namespace TimeSheetTool.helpers
                 worksheet.Cells[1, 14].Value = "BILLED COMPANY";
                 worksheet.Cells[1, 15].Value = "ENTITY";
 
+                // sets the column format to the required date format
                 worksheet.Column(1).Style.Numberformat.Format = "dd/mm/yyyy";
-
-                var row = 2;
-                //var orderedList = from element in entries orderby element.Date select element;
+               
+                // order in ascending date
                 var orderedList = entries.OrderBy(o => o.Date).ToList();
+                var row = 2;
+                
+                // populate the entries
                 foreach (SpreadSheetEntry entry in orderedList)
                 {
                     worksheet.Cells[row, 1].Value = entry.Date;

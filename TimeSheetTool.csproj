@@ -63,6 +63,7 @@
     </Compile>
     <Compile Include="helpers\DatabaseManager.cs" />
     <Compile Include="helpers\SpreadSheetUtil.cs" />
+    <Compile Include="model\CostCentreInfo.cs" />
     <Compile Include="model\SpreadSheetEntry.cs" />
     <Compile Include="model\TimeSheetEntry.cs" />
     <Compile Include="Program.cs" />

@@ -10,7 +10,7 @@ namespace TimeSheetTool.helpers
     {
         private readonly string connectionString = "";
 
-        private readonly string SQL_TIMESHEET_ENTRIES_PER_DAY =
+        private readonly string Sq_TimeSheet_Entries_Breakdown =
             "SELECT UserName, Day, ProjectName, Task, Hours, Rate " +
             "FROM Socket_Timesheet_Detail_Report WITH (NOLOCK) " +
             "WHERE projectName IN (@Projects) " +
@@ -26,7 +26,7 @@ namespace TimeSheetTool.helpers
             {
                 connection.Open();
 
-                using (SqlCommand command = new SqlCommand(SQL_TIMESHEET_ENTRIES_PER_DAY, connection))
+                using (SqlCommand command = new SqlCommand(Sq_TimeSheet_Entries_Breakdown, connection))
                 {
                     command.CommandText = command.CommandText.Replace("@Projects", string.Join(",", projects.Select(b => b)));
                     command.Parameters.AddWithValue("@From", from);
@@ -46,30 +46,14 @@ namespace TimeSheetTool.helpers
                                 entry.Date = reader.GetDateTime(1);
                                 entry.ProjectName = reader.GetString(2);
                                 entry.Task = reader.GetString(3);
-                                var x = reader.GetDouble(4);
-                                entry.Hours = x ;
-                                var y = reader.GetDouble(5);
-                                entry.Rate = y;
+                                entry.Hours = reader.GetDouble(4);
+                                entry.Rate = reader.GetDouble(5);
                                 entries.Add(entry);
                             }
                         }
                     } 
                 } 
             } 
-
-            return entries;
-        }
-
-
-        public List<TimeSheetEntry> RetrieveDailyDataForUsersTest(DateTime from, DateTime to)
-        {
-            List<TimeSheetEntry> entries = new List<TimeSheetEntry>();
-            TimeSheetEntry entry = new TimeSheetEntry();
-            entry.Date = new DateTime(); ;
-            entry.Name = "Hello Kitty";
-            entry.Task = "APP-DEVELOPMENT (PROJECTS)";
-            entry.Hours = 8;
-            entries.Add(entry);
 
             return entries;
         }
