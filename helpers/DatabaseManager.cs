@@ -8,9 +8,10 @@ namespace TimeSheetTool.helpers
 {
     public class DatabaseManager
     {
-        private readonly string connectionString = "";
+        private readonly string ConnectionString = "";
+          
 
-        private readonly string Sq_TimeSheet_Entries_Breakdown =
+        private readonly string Sql_TimeSheet_Entries_Breakdown =
             "SELECT UserName, Day, ProjectName, Task, Hours, Rate " +
             "FROM Socket_Timesheet_Detail_Report WITH (NOLOCK) " +
             "WHERE projectName IN (@Projects) " +
@@ -22,13 +23,13 @@ namespace TimeSheetTool.helpers
 
             List<TimeSheetEntry> entries = new List<TimeSheetEntry>();
 
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (SqlConnection connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
 
-                using (SqlCommand command = new SqlCommand(Sq_TimeSheet_Entries_Breakdown, connection))
+                using (SqlCommand command = new SqlCommand(Sql_TimeSheet_Entries_Breakdown, connection))
                 {
-                    command.CommandText = command.CommandText.Replace("@Projects", string.Join(",", projects.Select(b => b)));
+                    command.CommandText = command.CommandText.Replace("@Projects", string.Join(",", projects));
                     command.Parameters.AddWithValue("@From", from);
                     command.Parameters.AddWithValue("@To", to);
 
@@ -51,9 +52,9 @@ namespace TimeSheetTool.helpers
                                 entries.Add(entry);
                             }
                         }
-                    } 
-                } 
-            } 
+                    }
+                }
+            }
 
             return entries;
         }

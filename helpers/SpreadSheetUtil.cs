@@ -9,57 +9,73 @@ using TimeSheetTool.model;
 
 namespace TimeSheetTool.helpers
 {
+    /*
+     * This utility is used for two tasks:
+     * 1. Reads the cost centre details from the spread sheet based on the project Id
+     * 2. Creates a new sheet containing the projects participants daily totals
+    */
     public class SpreadSheetUtil
     {
-        private readonly FileInfo spreadSheetFile;
-        private readonly Dictionary<string, CostCentreInfo> costCentreCache; 
+        private readonly FileInfo SpreadSheetFile;
+        private readonly Dictionary<string, CostCentreInfo> CostCentreCache;
+        private readonly string CostCentreSheetName;
+        private readonly string TargetSheetname;
 
-        public SpreadSheetUtil(string fileName)
+        public SpreadSheetUtil(string fileName, string costCentreSheetName, string targetSheetName)
         {
-            spreadSheetFile = new FileInfo(fileName);
-            
+            this.CostCentreSheetName = costCentreSheetName;
+            this.TargetSheetname = targetSheetName;
+            this.SpreadSheetFile = new FileInfo(fileName);
+
             // put in the cache the info for the given cost centre, as there will be dozens of reads for the same project
-            costCentreCache = new Dictionary<string, CostCentreInfo>();
+            this.CostCentreCache = new Dictionary<string, CostCentreInfo>();
         }
 
-        public void AddSheet(List<model.SpreadSheetEntry> entries, string sheetName)
-        {
-            AddSheeet(sheetName, entries);
-        }
-
-
-        public CostCentreInfo GetCostCentreDetailsFromSheet(TimeSheetEntry timeSheetEntry, string companyCostCentreSheetName)
+        /// <summary>
+        /// Retrieves the cost centre details if already cached. If  not will call GetCostCentre to retrieve it.
+        /// It is assumed that the project Id will be located at the end of the project name found in the time sheet reports database
+        /// </summary>
+        /// <param name="timeSheetEntry">the daily project entry</param>
+        /// <exception cref="Exception">if the cost centre is not found for the given project Id</exception>
+        /// <returns>the cost centre info</returns>
+        public CostCentreInfo GetCostCentreDetailsFromSheet(TimeSheetEntry timeSheetEntry)
         {
             var projectName = timeSheetEntry.ProjectName;
             var projectId = projectName.Substring(projectName.LastIndexOf(" ") + 1);
 
-            if (costCentreCache.ContainsKey(projectId))
+            if (CostCentreCache.ContainsKey(projectId))
             {
-                return costCentreCache[projectId];
+                return CostCentreCache[projectId];
             }
 
-            var costCentreInfo = GetCostCentreInfo(companyCostCentreSheetName, projectId);
-            costCentreCache.Add(projectId,costCentreInfo);
-        
+            var costCentreInfo = GetCostCentreInfo(projectId);
+            CostCentreCache.Add(projectId, costCentreInfo);
+
             return costCentreInfo;
         }
 
-
-        private CostCentreInfo GetCostCentreInfo(string sheetName, string projectId)
+        /// <summary>
+        /// Returns the cost centre details for the given project Id
+        /// Assume the project name is located in the first column of the sheet and that it contains the project Id somewhere in the text
+        /// </summary>
+        /// <param name="projectId">the project Id</param>
+        /// <returns>the cost centre info</returns>
+        private CostCentreInfo GetCostCentreInfo(string projectId)
         {
 
-            using (ExcelPackage xlPackage = new ExcelPackage(spreadSheetFile))
+            using (ExcelPackage xlPackage = new ExcelPackage(SpreadSheetFile))
             {
                 ExcelWorksheet worksheet;
                 var sheetId = 1;
-                
+
                 while (true)
                 {
                     worksheet = xlPackage.Workbook.Worksheets[sheetId++];
 
-                    if (worksheet == null) throw new Exception("Sheet name does not exist in excel document: " + sheetName);
+                    //ensures while loop cant run forever
+                    if (worksheet == null) throw new Exception("Sheet name does not exist in excel document: " + CostCentreSheetName);
 
-                    if (worksheet.Name.Trim().Equals(sheetName, StringComparison.CurrentCultureIgnoreCase)) break;                 
+                    if (worksheet.Name.Trim().Equals(CostCentreSheetName, StringComparison.CurrentCultureIgnoreCase)) break;
                 }
 
                 var rownum = 0;
@@ -76,17 +92,17 @@ namespace TimeSheetTool.helpers
                     throw new Exception("Project Id in spreadsheet could not be found: " + projectId);
                 }
 
-                return new CostCentreInfo((string) worksheet.GetValue(rownum, 1), (string) worksheet.GetValue(rownum, 5), (string) worksheet.GetValue(rownum, 6));
+                return new CostCentreInfo((string)worksheet.GetValue(rownum, 1), (string)worksheet.GetValue(rownum, 5), (string)worksheet.GetValue(rownum, 6));
             }
 
         }
 
-        private void AddSheeet(String name, List<SpreadSheetEntry> entries)
+        public void AddSheet(List<SpreadSheetEntry> entries)
         {
 
-            using (ExcelPackage xlPackage = new ExcelPackage(spreadSheetFile))
+            using (ExcelPackage xlPackage = new ExcelPackage(SpreadSheetFile))
             {
-                ExcelWorksheet worksheet = xlPackage.Workbook.Worksheets.Add(name);
+                ExcelWorksheet worksheet = xlPackage.Workbook.Worksheets.Add(TargetSheetname);
 
                 //Add the headers 
                 worksheet.Cells[1, 1].Value = "WORKED DATE";
@@ -107,11 +123,11 @@ namespace TimeSheetTool.helpers
 
                 // sets the column format to the required date format
                 worksheet.Column(1).Style.Numberformat.Format = "dd/mm/yyyy";
-               
+
                 // order in ascending date
                 var orderedList = entries.OrderBy(o => o.Date).ToList();
                 var row = 2;
-                
+
                 // populate the entries
                 foreach (SpreadSheetEntry entry in orderedList)
                 {
@@ -123,7 +139,7 @@ namespace TimeSheetTool.helpers
                     worksheet.Cells[row, 6].Value = entry.Quantity;
                     worksheet.Cells[row, 7].Value = "HOURS";
                     worksheet.Cells[row, 8].Value = entry.UnitAmount;
-                    worksheet.Cells[row, 9].Value = entry.Quantity * entry.UnitAmount ;
+                    worksheet.Cells[row, 9].Value = entry.Quantity * entry.UnitAmount;
                     worksheet.Cells[row, 10].Value = entry.CostType;
                     worksheet.Cells[row, 11].Value = entry.CostCentre;
                     worksheet.Cells[row, 12].Value = "--";

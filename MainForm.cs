@@ -7,7 +7,7 @@ namespace TimeSheetTool
     public partial class MainForm : Form
     {
         private readonly String Company_Cost_Centre = "Company & Cost Centre";
-        private readonly InvoiceSheetGenerator generator = new InvoiceSheetGenerator();
+        private readonly InvoiceSheetGenerator Generator = new InvoiceSheetGenerator();
         private string fileName;
 
         public MainForm()
@@ -34,7 +34,7 @@ namespace TimeSheetTool
                 }
                 else
                 {
-                    generator.GenerateInvoiceSheet(from, to, fileName, GetProjectList(), Company_Cost_Centre, targetSheetName.Text);
+                    Generator.GenerateInvoiceSheet(from, to, fileName, GetProjectList(), Company_Cost_Centre, targetSheetName.Text);
                     MessageBox.Show(MainForm.ActiveForm, "Completed task.");
                 }
 
