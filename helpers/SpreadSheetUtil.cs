@@ -21,14 +21,16 @@ namespace TimeSheetTool.helpers
         private readonly string CostCentreSheetName;
         private readonly string TargetSheetname;
 
-        public SpreadSheetUtil(string fileName, string costCentreSheetName, string targetSheetName)
+        public SpreadSheetUtil(string fileName, string targetSheetName)
         {
-            this.CostCentreSheetName = costCentreSheetName;
+            this.CostCentreSheetName = Properties.Settings.Default.CostCentreSheetName;
             this.TargetSheetname = targetSheetName;
             this.SpreadSheetFile = new FileInfo(fileName);
 
             // put in the cache the info for the given cost centre, as there will be dozens of reads for the same project
             this.CostCentreCache = new Dictionary<string, CostCentreInfo>();
+
+            System.Console.WriteLine(string.Format("Will use data from sheet {0} and will save to {1}", CostCentreSheetName, TargetSheetname));
         }
 
         /// <summary>

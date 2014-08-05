@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -8,8 +9,8 @@ namespace TimeSheetTool.helpers
 {
     public class DatabaseManager
     {
-        private readonly string ConnectionString = "";
-          
+        private readonly string ConnectionString;
+        
 
         private readonly string Sql_TimeSheet_Entries_Breakdown =
             "SELECT UserName, Day, ProjectName, Task, Hours, Rate " +
@@ -17,17 +18,21 @@ namespace TimeSheetTool.helpers
             "WHERE projectName IN (@Projects) " +
             "AND Day BETWEEN @From AND @To";
 
+        public DatabaseManager()
+        {
+            ConnectionString = ConfigurationManager.ConnectionStrings["TimesheetReportsDb"].ConnectionString;
+        }
 
         public List<TimeSheetEntry> RetrieveDailyDataForUsers(DateTime from, DateTime to, List<string> projects)
         {
 
             List<TimeSheetEntry> entries = new List<TimeSheetEntry>();
 
-            using (SqlConnection connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
 
-                using (SqlCommand command = new SqlCommand(Sql_TimeSheet_Entries_Breakdown, connection))
+                using (var command = new SqlCommand(Sql_TimeSheet_Entries_Breakdown, connection))
                 {
                     command.CommandText = command.CommandText.Replace("@Projects", string.Join(",", projects));
                     command.Parameters.AddWithValue("@From", from);
@@ -35,7 +40,7 @@ namespace TimeSheetTool.helpers
 
                     command.CommandTimeout = 0;
 
-                    using (SqlDataReader reader = command.ExecuteReader())
+                    using (var reader = command.ExecuteReader())
                     {
                         if (reader != null)
                         {
