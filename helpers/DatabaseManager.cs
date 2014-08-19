@@ -9,19 +9,13 @@ namespace TimeSheetTool.helpers
 {
     public class DatabaseManager
     {
-        private readonly string ConnectionString;
-        
-
+        private readonly string ConnectionString = ConfigurationManager.ConnectionStrings["TimesheetReportsDb"].ConnectionString;
+       
         private readonly string Sql_TimeSheet_Entries_Breakdown =
             "SELECT UserName, Day, ProjectName, Task, Hours, Rate " +
             "FROM Socket_Timesheet_Detail_Report WITH (NOLOCK) " +
             "WHERE projectName IN (@Projects) " +
             "AND Day BETWEEN @From AND @To";
-
-        public DatabaseManager()
-        {
-            ConnectionString = ConfigurationManager.ConnectionStrings["TimesheetReportsDb"].ConnectionString;
-        }
 
         public List<TimeSheetEntry> RetrieveDailyDataForUsers(DateTime from, DateTime to, List<string> projects)
         {
